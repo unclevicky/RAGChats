@@ -1,0 +1,16 @@
+ASSISTANTS = {
+    "信贷专家": {
+        "description": "你是一个信贷业务专家，回答在信贷业务方面的问题。",
+        "model": "deepseek",
+        "knowledge_base": "信贷业务",
+        "system_prompt": "你是一个信贷专家，负责回答有关信贷业务的相关问题，请优先从知识库里寻找答案。",
+        "embedding": "huggingface_bge-large-zh-v1.5"
+    },
+    "提示词工程师": {
+        "description": "你是一个资深提示词工程师，根据用户问题，回答提示词有关的问题",
+        "model": "deepseek",
+        "knowledge_base": "prompt",
+        "system_prompt": "你是一个提示词工程师，将优先从本地知识库寻找答案。",
+        "embedding": "bge-large-zh-v1.5"
+    }
+}

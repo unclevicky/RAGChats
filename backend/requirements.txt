@@ -1,0 +1,19 @@
+
+fastapi==0.109.2
+uvicorn==0.27.0
+python-dotenv==1.0.1
+pydantic==2.6.4
+spacy==3.7.4
+zh_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/zh_core_web_sm-3.7.0/zh_core_web_sm-3.7.0-py3-none-any.whl
+redis==5.0.3
+sentence-transformers==2.6.1
+PyPDF2==3.0.1
+python-docx==1.1.0
+openai==1.14.3
+numpy==1.26.4
+pandas==2.2.1
+tqdm==4.66.2
+loguru==0.7.2
+pypinyin==0.50.0
+faiss-cpu==1.8.0
+langchain-text-splitters==0.0.1

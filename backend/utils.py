@@ -11,7 +11,6 @@ import tempfile
 import json
 import faiss
 from llama_index.llms.openai_like import OpenAILike
-from llama_index.llms.openai_like import OpenAILike
 from llama_index.core import Settings,SimpleDirectoryReader,VectorStoreIndex, StorageContext, load_index_from_storage
 from llama_index.core.embeddings import BaseEmbedding
 from llama_index.core.node_parser import LangchainNodeParser

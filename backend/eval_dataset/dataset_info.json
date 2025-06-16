@@ -16,6 +16,13 @@
         "_type": "Value"
       },
       "_type": "Sequence"
+    },
+    "ground_truths": {
+      "feature": {
+        "dtype": "null",
+        "_type": "Value"
+      },
+      "_type": "Sequence"
     }
   },
   "homepage": "",

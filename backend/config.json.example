@@ -1,28 +1,28 @@
 {
     "deepseek": {
         "url": "https://integrate.api.nvidia.com/v1",
-        "api_key": "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",
+        "api_key": "nvapi-1234567890",
         "model": "deepseek-ai/deepseek-r1",
         "type": "llm",
         "provider": "NVIDIA"
     },
     "siliconflow_deepseek": {
         "url": "https://api.siliconflow.cn/v1",
-        "api_key": "sk-kfagojealbivndyrjohvwvhkaeomcsnnnlxhsjnmhyhhoihs",
+        "api_key": "sk-1234567890",
         "model": "deepseek-ai/DeepSeek-R1",
         "type": "llm",
         "provider": "siliconflow"
     },
     "nvidia_deepseek": {
         "url": "https://integrate.api.nvidia.com/v1",
-        "api_key": "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",
+        "api_key": "nvapi-1234567890",
         "model": "deepseek-ai/deepseek-r1",
         "type": "llm",
         "provider": "NVIDIA"
     },
     "bge-large-zh-v1.5": {
         "url": "https://api.siliconflow.cn/v1/embeddings",
-        "api_key": "sk-kfagojealbivndyrjohvwvhkaeomcsnnnlxhsjnmhyhhoihs",
+        "api_key": "sk-1234567890",
         "model": "BAAI/bge-large-zh-v1.5",
         "type": "embedding",
         "provider": "SiliconFlow"

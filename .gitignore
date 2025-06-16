@@ -6,6 +6,7 @@ WisdomChats.zip
 backend/data
 backend/meta
 backend/vectorstore
+backend/config.json
 
 #nodejs
 node_modules/

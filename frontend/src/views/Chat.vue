@@ -1,4 +1,3 @@
-
 <template>
   <div class="chat-container">
     <div class="assistant-panel">
@@ -38,8 +37,44 @@
     <div class="chat-panel">
       <div class="chat-area" ref="chatAreaRef">
         <div v-for="(message, index) in chatHistory" :key="index" class="message" :class="message.type">
-          <p v-html="formatMessage(message.content)"></p>
-          <small v-if="message.source">{{ message.source }}</small>
+          <!-- 用户消息 -->
+          <p v-if="message.type === 'user'" v-html="formatMessage(message.content)"></p>
+          
+          <!-- 机器人消息 -->
+          <div v-else>
+            <!-- 思考过程 -->
+            <div v-if="message.thinking" class="thinking-section" :class="{ 'collapsed': !message.showThinking }">
+              <div class="thinking-header" @click="toggleThinking(message)">
+                <span>思考过程</span>
+                <span class="toggle-icon">{{ message.showThinking ? '▼' : '▶' }}</span>
+              </div>
+              <div class="thinking-content">
+                <p v-html="formatMessage(message.thinking)"></p>
+              </div>
+            </div>
+            
+            <!-- 回答内容 -->
+            <div class="answer-content">
+              <p v-html="formatMessage(message.content)"></p>
+            </div>
+            
+            <!-- 引用源 -->
+            <div v-if="message.sources && message.sources.length > 0" class="sources-section">
+              <div class="sources-header" @click="message.showSources = !message.showSources">
+                <span>引用内容 ({{ message.sources.length }})</span>
+                <span class="toggle-icon">{{ message.showSources ? '▼' : '▶' }}</span>
+              </div>
+              <div v-show="message.showSources" class="sources-content">
+                <div v-for="(source, sIndex) in message.sources" :key="sIndex" class="source-item">
+                  <div class="source-title">
+                    <span class="source-index">{{ sIndex + 1 }}</span>
+                    <span class="source-file">{{ getFileName(source.file) }}</span>
+                  </div>
+                  <p class="source-text" v-html="formatMessage(source.text)"></p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="input-area">
@@ -83,7 +118,10 @@ export default {
       const botMessage = {
         type: 'bot',
         content: '',
-        source: null
+        thinking: '',  // 思考过程
+        sources: [],   // 引用源
+        showThinking: false,  // 控制思考过程的显示(默认折叠)
+        showSources: false   // 控制引用源的显示
       };
       chatHistory.value.push(botMessage);
 
@@ -124,14 +162,34 @@ export default {
             if (!line.startsWith('data:')) continue;
             
             try {
-              const data = JSON.parse(line.replace('data:', '').trim());
-              if (data.content) {
+              const jsonStr = line.replace('data:', '').trim();
+              const data = JSON.parse(jsonStr);
+              
+              // 根据消息类型处理
+              if (data.type === 'thinking') {
+                // 更新思考过程
+                botMessage.thinking = data.content;
+                // 思考过程初始是展开的，便于用户看到思考过程
+                botMessage.showThinking = true;
+              } else if (data.type === 'answer') {
+                // 更新答案内容
                 botMessage.content += data.content;
-                // 强制触发Vue响应式更新
-                chatHistory.value = [...chatHistory.value];
+                // 当开始接收答案时，折叠思考过程
+                if (botMessage.thinking && data.content.trim() !== '') {
+                  botMessage.showThinking = false;
+                }
+              } else if (data.type === 'sources') {
+                // 更新引用源
+                botMessage.sources = data.content;
+              } else if (data.content) {
+                // 兼容旧格式
+                botMessage.content += data.content;
               }
+              
+              // 强制触发Vue响应式更新
+              chatHistory.value = [...chatHistory.value];
             } catch (e) {
-              console.error('解析消息失败:', e);
+              console.error('解析消息失败:', e, line);
             }
           }
         }
@@ -164,6 +222,19 @@ export default {
         .replace(/\*(.*?)\*/g, '<em>$1</em>'); // 斜体
     };
 
+    const getFileName = (file) => {
+      if (!file) return '';
+      const parts = file.split('/');
+      return parts[parts.length - 1];
+    };
+
+    const toggleThinking = (message) => {
+      // 切换思考过程的显示状态
+      message.showThinking = !message.showThinking;
+      // 强制触发Vue响应式更新
+      chatHistory.value = [...chatHistory.value];
+    };
+
     return {
       assistants,
       selectedAssistant,
@@ -171,7 +242,9 @@ export default {
       chatHistory,
       sendQuestion,
       chatAreaRef,
-      formatMessage
+      formatMessage,
+      getFileName,
+      toggleThinking
     };
   }
 };
@@ -322,5 +395,77 @@ pre {
 
 .input-area button:hover {
   background-color: #45a049;
+}
+
+.thinking-section {
+  margin-bottom: 10px;
+  background-color: #f9f9f9;
+  border-radius: 5px;
+  padding: 8px;
+  border-left: 3px solid #e0e0e0;
+}
+
+.thinking-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+  color: #555;
+}
+
+.toggle-icon {
+  margin-left: 5px;
+}
+
+.thinking-content {
+  margin-top: 5px;
+  margin-left: 20px;
+  font-size: 0.95em;
+  color: #666;
+}
+
+.thinking-section.collapsed .thinking-content {
+  display: none;
+}
+
+.answer-content {
+  margin-top: 10px;
+  font-size: 1.05em;
+}
+
+.sources-section {
+  margin-top: 10px;
+  background-color: #f5f7fa;
+  border-radius: 5px;
+  padding: 8px;
+  border-left: 3px solid #4CAF50;
+}
+
+.sources-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.source-item {
+  margin-bottom: 5px;
+}
+
+.source-title {
+  font-weight: 600;
+}
+
+.source-index {
+  margin-right: 5px;
+}
+
+.source-file {
+  font-weight: 400;
+}
+
+.source-text {
+  margin-left: 20px;
 }
 </style>

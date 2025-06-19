@@ -10,6 +10,7 @@ import os
 import logging
 from typing import Dict
 import asyncio
+import time
 
 def get_project_root():
     if getattr(sys, 'frozen', False):
@@ -39,23 +40,138 @@ DATA_DIR = Path(project_root) / "data"
 META_DIR = Path(project_root) / "meta"
 
 
-def create_app():
-    app = FastAPI()
+def setup_logs_dir():
+    if getattr(sys, 'frozen', False):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    log_dir = os.path.join(base_dir, "logs")
+    os.makedirs(log_dir, exist_ok=True)  # 使用os创建目录
+    return log_dir
 
-    # 注册中间件
+def setup_logging():
+    log_dir = setup_logs_dir()
+    log_file = os.path.join(log_dir, "backend.log")
+    
+    # 创建双重处理器（文件 + 控制台）
+    file_handler = logging.FileHandler(log_file, encoding='utf-8')
+    console_handler = logging.StreamHandler()
+    
+    # 统一格式
+    formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] [%(module)s:%(lineno)d] [%(threadName)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    
+    # 重置并配置全局处理器
+    logging.basicConfig(
+        level=logging.INFO,  # 默认使用INFO级别
+        handlers=[file_handler, console_handler],  # 同时输出到文件和控制台
+        force=True
+    )
+    
+    # 设置特定模块的日志级别
+    logging.getLogger('uvicorn').setLevel(logging.WARNING)
+    logging.getLogger('llama_index').setLevel(logging.WARNING)
+    
+    # 添加日志轮转
+    from logging.handlers import RotatingFileHandler
+    rotating_handler = RotatingFileHandler(
+        log_file,
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    rotating_handler.setFormatter(formatter)
+    
+    # 替换之前的文件处理器
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        if isinstance(handler, logging.FileHandler) and not isinstance(handler, RotatingFileHandler):
+            root_logger.removeHandler(handler)
+    root_logger.addHandler(rotating_handler)
+    
+    # 记录启动日志
+    logging.info("=" * 50)
+    logging.info("RAGChats 后端服务启动")
+    logging.info("=" * 50)
+
+# 在应用创建前设置日志
+setup_logging()
+
+def create_app():
+    app = FastAPI(
+        title="RAGChats API",
+        description="RAG知识库聊天系统API",
+        version="1.0.0"
+    )
+
+    # 注册请求跟踪中间件
+    from backend.middleware import RequestTrackingMiddleware
+    app.add_middleware(RequestTrackingMiddleware, slow_request_threshold=3.0)
+    
+    # 注册并发限制中间件
+    from backend.middleware import ConcurrencyLimiterMiddleware
+    app.add_middleware(
+        ConcurrencyLimiterMiddleware,
+        chat_limit=10,         # 最多同时处理10个聊天请求
+        kb_creation_limit=3,   # 最多同时处理3个知识库创建请求
+        file_process_limit=5   # 最多同时处理5个文件处理请求
+    )
+    
+    # 注册流媒体中间件
+    from backend.middleware import StreamBufferMiddleware
     app.add_middleware(StreamBufferMiddleware)
+    
     # 添加CORS中间件
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173"],  # 允许的前端地址
+        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],  # 允许的前端地址
         allow_credentials=True,
         allow_methods=["*"],  # 允许所有方法
         allow_headers=["*"],  # 允许所有头
     )
+    
+    # 注册错误处理器
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request, exc):
+        logging.error(f"HTTP异常: {exc.detail}")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"error": exc.detail},
+        )
+    
+    @app.exception_handler(Exception)
+    async def generic_exception_handler(request, exc):
+        logging.exception(f"未处理的异常: {str(exc)}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": "服务器内部错误，请查看日志了解详情"},
+        )
+    
     # 注册路由
     app.include_router(knowledge.router, prefix="/api")
     app.include_router(chat.router, prefix="/api")
     app.include_router(system.router, prefix="/api/system")
+    
+    # 注册启动和关闭事件
+    @app.on_event("startup")
+    async def startup_event():
+        logging.info("应用启动中...")
+        # 创建必要的目录
+        os.makedirs(DATA_DIR, exist_ok=True)
+        os.makedirs(META_DIR, exist_ok=True)
+        logging.info("应用启动完成")
+    
+    @app.on_event("shutdown")
+    async def shutdown_event():
+        logging.info("应用关闭中...")
+        # 清理资源
+        logging.info("应用已关闭")
+    
     return app
 
 app = create_app()
@@ -104,42 +220,7 @@ async def query_knowledge_base(query: str, kb_id: str = None):
         "answer": "This is a placeholder response. RAG functionality will be implemented later."
     }
 
-def setup_logs_dir():
-    if getattr(sys, 'frozen', False):
-        base_dir = os.path.dirname(sys.executable)
-    else:
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    log_dir = os.path.join(base_dir, "logs")
-    os.makedirs(log_dir, exist_ok=True)  # 使用os创建目录
-    return log_dir
-
-def setup_logging():
-    log_dir = setup_logs_dir()
-    log_file = os.path.join(log_dir, "backend.log")
-    
-    # 创建双重处理器（文件 + 控制台）
-    file_handler = logging.FileHandler(log_file)
-    console_handler = logging.StreamHandler()
-    
-    # 统一格式
-    formatter = logging.Formatter(
-        "[%(asctime)s] [%(levelname)s] [%(module)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    )
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-    
-    # 重置并配置全局处理器
-    logging.basicConfig(
-        level=logging.DEBUG,
-        handlers=[file_handler, console_handler],  # 同时输出到文件和控制台
-        force=True
-    )
-
 if __name__ == "__main__":
-    setup_logging()  # 确保日志配置在启动时生效
-    logging.getLogger().info("全局配置生效测试") 
     import uvicorn
     from backend import utils
     from backend.routes import system, chat, knowledge

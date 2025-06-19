@@ -1,0 +1,25 @@
+{
+  "prompt": {
+    "kb_id": "prompt",
+    "source_path": "C:\\Users\\leona\\workspace\\02.AI\\RAGChats\\backend\\vectorstore\\prompt\\temp",
+    "vector_path": "C:\\Users\\leona\\workspace\\02.AI\\RAGChats\\backend\\vectorstore\\prompt",
+    "embedding_model": "bge-large-zh-v1.5",
+    "incremental": false,
+    "status": "启用",
+    "documents": {
+      "001.如何写好prompt.md": {
+        "doc_id": "001.如何写好prompt.md",
+        "name": "001.如何写好prompt.md",
+        "status": "已完成",
+        "error": "",
+        "last_updated": "2025-06-19T20:58:09.644880",
+        "create_time": "2025-06-19 20:47:54.804834",
+        "update_time": "2025-06-19 20:47:54.804834"
+      }
+    },
+    "last_processed": "2025-06-19T20:58:09.747286",
+    "processed_files": 9,
+    "create_time": "2025-06-19 20:47:54.804834",
+    "update_time": "2025-06-19 20:58:09.748287"
+  }
+}

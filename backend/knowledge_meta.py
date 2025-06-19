@@ -1,4 +1,3 @@
-
 import os
 import threading
 from datetime import datetime
@@ -15,7 +14,9 @@ class DocumentMeta(BaseModel):
     """单个文档元数据"""
     doc_id: str  # 文档ID（文件名）
     name: str  # 显示名称
-    status: str = "未处理"  # 状态：未处理/处理成功/处理失败
+    status: str = "未处理"  # 状态：未处理/处理中/已完成/失败
+    error: str = ""  # 错误信息
+    last_updated: str = ""  # 最后更新时间
     create_time: datetime = datetime.now()
     update_time: datetime = datetime.now()
 
@@ -28,6 +29,8 @@ class KnowledgeBaseMeta(BaseModel):
     incremental: bool = True  # 是否增量更新
     status: str = "启用"  # 状态：启用/停用 
     documents: Dict[str, DocumentMeta] = {}  # 文档元数据字典
+    last_processed: str = ""  # 最后处理时间
+    processed_files: int = 0  # 已处理文件数量
     create_time: datetime = datetime.now()
     update_time: datetime = datetime.now()
 
@@ -95,6 +98,10 @@ class KnowledgeMetaManager:
         """更新知识库元数据"""
         self.knowledge_bases[kb_meta.kb_id] = kb_meta
         self.save_meta()
+    
+    def save_knowledge_base(self, kb_meta: KnowledgeBaseMeta):
+        """保存知识库元数据（别名方法，与update_knowledge_base功能相同）"""
+        self.update_knowledge_base(kb_meta)
     
     def list_knowledge_bases(self) -> List[KnowledgeBaseMeta]:
         """列出所有知识库"""
